@@ -40,24 +40,23 @@ def UpdateCache():
 
 def PrintEntry(entry):
     if re.search('item',entry.tag) or re.search('entry',entry.tag):
-        string = {}
-        string['link'] = ''
-        string['title'] = ''
-        string['author'] = ''
+        link = ''
+        title = ''
+        author = ''
         for item in entry:
                 match re.sub('{.*?}','',item.tag):
                     case 'link':
                         try:
-                            string['link'] = item.attrib['href']
+                            link = item.attrib['href']
                         except:
-                            string['link'] = item.text
+                            link = item.text
                     case 'author':
-                        string['author'] = item[0].text
+                        author = item[0].text
                     case 'title':
-                        string['title'] = item.text
+                        title = item.text
                     case _:
                         pass
-        print(string['title'] + ' ' + string['link'] + ' ' + string['author'])
+        print(title + ' ' + link + ' ' + author)
 
 def Add(url):
     feeds = open(configFolder+ 'feeds.txt','a')
