@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+import re, os, sys, hashlib, requests
+import xml.etree.ElementTree as et
+
+configFolder = os.path.expanduser('~/.config/feeds/')
+header = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, \
+           like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
+
+Error = lambda i:print(i + ' error: blocked due to spam requesting or no internet')
+
+def FeedHash(entry):
+    if re.search('item',entry.tag) or re.search('entry',entry.tag):
+        for item in entry:
+            if re.sub('{.*?}','',item.tag) == 'title':
+                return hashlib.md5(str(item.text).encode()).hexdigest()
+
+def Feed(url):
+    request = ''
+    try:
+        request = requests.get(url.replace('\n',''),headers=header).text
+    except:
+        Error(url)
+        return
+    feed = et.fromstring(request)
+    try:
+        feed[1]
+    except:
+        feed = feed[0]
+    return feed
+
+def UpdateCache():
+    file = open(configFolder + '.cache','w')
+    for url in open(configFolder + 'feeds.txt','r'):
+        for entry in Feed(url):
+            hash = FeedHash(entry)
+            if hash:
+                file.write(hash + '\n')
+                break
+    file.close()
+
+def PrintEntry(entry):
+    if re.search('item',entry.tag) or re.search('entry',entry.tag):
+        string = {}
+        string['link'] = ''
+        string['title'] = ''
+        string['author'] = ''
+        for item in entry:
+                match re.sub('{.*?}','',item.tag):
+                    case 'link':
+                        try:
+                            string['link'] = item.attrib['href']
+                        except:
+                            string['link'] = item.text
+                    case 'author':
+                        string['author'] = item[0].text
+                    case 'title':
+                        string['title'] = item.text
+                    case _:
+                        pass
+        print(string['title'] + ' ' + string['link'] + ' ' + string['author'])
+
+def Add(url):
+    feeds = open(configFolder+ 'feeds.txt','a')
+    feeds.write(url + '\n')
+    feeds.close()
+    UpdateCache()
+
+def New():
+    caches = open(configFolder + '.cache','r')
+    urls = open(configFolder + 'feeds.txt','r')
+    for cache,url in zip(caches,urls):
+        cache = cache.replace('\n','')
+        for entry in Feed(url):
+            if FeedHash(entry) != cache:
+                PrintEntry(entry)
+            else:
+                break
+    UpdateCache()
+
+def Main(args):
+    match args[0]:
+        case 'add':
+            Add(args[1:])
+        case 'new':
+            New()
+        case 'update':
+            UpdateCache()
+        case _:
+            pass
+
+if __name__ == '__main__' and len(sys.argv) > 1:
+    Main(sys.argv[1:])
+else:
+    print('w')
